@@ -78,35 +78,44 @@ class UNet(nn.Module):
         )
         self.label_emb = nn.Embedding(n_classes + 1, emb_dim)
         self.conv_in = nn.Conv2d(3, ch, 3, padding=1)
-        self.down, skips, cur, res = nn.ModuleList(), [ch], ch, 32
+        self.down, skips, cur, res = self._build_down(ch, mults, emb_dim, attn_res)
+        self.mid = nn.ModuleList(
+            [ResBlock(cur, cur, emb_dim), Attention(cur), ResBlock(cur, cur, emb_dim)]
+        )
+        self.up = self._build_up(ch, mults, emb_dim, attn_res, skips, cur, res)
+        cur = ch * mults[0]
+        self.norm_out = nn.GroupNorm(32, cur)
+        self.conv_out = nn.Conv2d(cur, 3, 3, padding=1)
+
+    def _build_down(self, ch, mults, emb_dim, attn_res):
+        down, skips, cur, res = nn.ModuleList(), [ch], ch, 32
         for i, m in enumerate(mults):
             for _ in range(2):
                 stage = nn.ModuleList([ResBlock(cur, ch * m, emb_dim)])
                 cur = ch * m
                 if res == attn_res:
                     stage.append(Attention(cur))
-                self.down.append(stage)
+                down.append(stage)
                 skips.append(cur)
             if i < len(mults) - 1:
-                self.down.append(nn.ModuleList([Downsample(cur)]))
+                down.append(nn.ModuleList([Downsample(cur)]))
                 skips.append(cur)
                 res //= 2
-        self.mid = nn.ModuleList(
-            [ResBlock(cur, cur, emb_dim), Attention(cur), ResBlock(cur, cur, emb_dim)]
-        )
-        self.up = nn.ModuleList()
+        return down, skips, cur, res
+
+    def _build_up(self, ch, mults, emb_dim, attn_res, skips, cur, res):
+        up = nn.ModuleList()
         for i, m in reversed(list(enumerate(mults))):
             for _ in range(3):
                 stage = nn.ModuleList([ResBlock(cur + skips.pop(), ch * m, emb_dim)])
                 cur = ch * m
                 if res == attn_res:
                     stage.append(Attention(cur))
-                self.up.append(stage)
+                up.append(stage)
             if i > 0:
-                self.up.append(nn.ModuleList([Upsample(cur)]))
+                up.append(nn.ModuleList([Upsample(cur)]))
                 res *= 2
-        self.norm_out = nn.GroupNorm(32, cur)
-        self.conv_out = nn.Conv2d(cur, 3, 3, padding=1)
+        return up
 
     def forward(self, x, t, y):
         emb = self.time_mlp(timestep_embedding(t, self.ch)) + self.label_emb(y)
@@ -115,8 +124,7 @@ class UNet(nn.Module):
         for stage in self.down:
             h = self.run_stage(stage, h, emb)
             skips.append(h)
-        for block in self.mid:
-            h = self.run_stage(nn.ModuleList([block]), h, emb)
+        h = self.run_stage(self.mid, h, emb)
         for stage in self.up:
             if isinstance(stage[0], Upsample):
                 h = stage[0](h)
