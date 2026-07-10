@@ -6,3 +6,4 @@ data/
 *.pt
 *.ckpt
 assets/scratch/
+.DS_Store

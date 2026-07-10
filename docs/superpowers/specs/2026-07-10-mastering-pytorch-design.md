@@ -80,18 +80,27 @@ is CEM with 300 sampled action sequences, 30 iterations, top-30 elites, under MP
 MasteringPytorch/
   pyproject.toml          uv, python 3.12, torch 2.13, modal 1.5
   CLAUDE.md               code conventions (enforced, no exceptions)
-  utils.py                shared across projects only
   <NN>-<name>/
     README.md             the paper, the idea, the expected result
     model.py              reference implementation — one module
     template.py           signature-only stubs — you fill these in
     train.py              Modal entrypoint
-    tests/test_<name>.py  the oracle
+    utils.py              this project's helpers and Modal harness
+    tests/
+      conftest.py         puts the project dir on sys.path
+      test_<name>.py      the oracle
     assets/               generated samples, curves (gitignored except finals)
 ```
 
 Exactly one reference module per project, mirrored by exactly one `template.py`. Splitting the
 reference across files would force a matching split of the template and an asymmetric oracle.
+
+**Projects are isolated.** There is no repo-root `utils.py` and no cross-project imports. Each
+project carries its own copy of `load_impl`, `seed_everything`, `save_grid`, and the Modal
+`app`/`image`/`volume`. This duplicates perhaps thirty lines per project — deliberately. A project
+must be readable, runnable, and copy-pasteable on its own, and later projects must be free to
+change their harness without disturbing earlier ones. The "put it in `utils.py`" convention scopes
+*within* a project, not across the repo.
 
 A function moves to root `utils.py` only once a second file needs it. No speculative shared
 layer.
