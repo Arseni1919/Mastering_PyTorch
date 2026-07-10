@@ -17,3 +17,17 @@ def test_seed_everything_is_deterministic():
     a = torch.randn(4)
     seed_everything(0)
     assert torch.equal(a, torch.randn(4))
+
+
+def test_cosine_abar_properties():
+    abar = load_impl(PROJECT).cosine_abar(1000)
+    assert abar.shape == (1000,)
+    assert abar[0] > 0.999
+    assert abar[-1] < 0.01
+    assert torch.all(abar[1:] < abar[:-1])
+
+
+def test_timestep_embedding_shape_and_range():
+    emb = load_impl(PROJECT).timestep_embedding(torch.arange(8), 128)
+    assert emb.shape == (8, 128)
+    assert emb.abs().max() <= 1.0
