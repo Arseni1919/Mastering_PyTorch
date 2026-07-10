@@ -7,3 +7,5 @@ data/
 *.ckpt
 assets/scratch/
 .DS_Store
+.superpowers/
+.idea/
