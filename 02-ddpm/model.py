@@ -67,3 +67,64 @@ class Upsample(nn.Module):
 
     def forward(self, x):
         return self.conv(F.interpolate(x, scale_factor=2, mode="nearest"))
+
+
+class UNet(nn.Module):
+    def __init__(self, ch=128, mults=(1, 2, 2, 2), n_classes=10, emb_dim=512, attn_res=16):
+        super().__init__()
+        self.ch = ch
+        self.time_mlp = nn.Sequential(
+            nn.Linear(ch, emb_dim), nn.SiLU(), nn.Linear(emb_dim, emb_dim)
+        )
+        self.label_emb = nn.Embedding(n_classes + 1, emb_dim)
+        self.conv_in = nn.Conv2d(3, ch, 3, padding=1)
+        self.down, skips, cur, res = nn.ModuleList(), [ch], ch, 32
+        for i, m in enumerate(mults):
+            for _ in range(2):
+                stage = nn.ModuleList([ResBlock(cur, ch * m, emb_dim)])
+                cur = ch * m
+                if res == attn_res:
+                    stage.append(Attention(cur))
+                self.down.append(stage)
+                skips.append(cur)
+            if i < len(mults) - 1:
+                self.down.append(nn.ModuleList([Downsample(cur)]))
+                skips.append(cur)
+                res //= 2
+        self.mid = nn.ModuleList(
+            [ResBlock(cur, cur, emb_dim), Attention(cur), ResBlock(cur, cur, emb_dim)]
+        )
+        self.up = nn.ModuleList()
+        for i, m in reversed(list(enumerate(mults))):
+            for _ in range(3):
+                stage = nn.ModuleList([ResBlock(cur + skips.pop(), ch * m, emb_dim)])
+                cur = ch * m
+                if res == attn_res:
+                    stage.append(Attention(cur))
+                self.up.append(stage)
+            if i > 0:
+                self.up.append(nn.ModuleList([Upsample(cur)]))
+                res *= 2
+        self.norm_out = nn.GroupNorm(32, cur)
+        self.conv_out = nn.Conv2d(cur, 3, 3, padding=1)
+
+    def forward(self, x, t, y):
+        emb = self.time_mlp(timestep_embedding(t, self.ch)) + self.label_emb(y)
+        h = self.conv_in(x)
+        skips = [h]
+        for stage in self.down:
+            h = self.run_stage(stage, h, emb)
+            skips.append(h)
+        for block in self.mid:
+            h = self.run_stage(nn.ModuleList([block]), h, emb)
+        for stage in self.up:
+            if isinstance(stage[0], Upsample):
+                h = stage[0](h)
+                continue
+            h = self.run_stage(stage, torch.cat([h, skips.pop()], dim=1), emb)
+        return self.conv_out(F.silu(self.norm_out(h)))
+
+    def run_stage(self, stage, h, emb):
+        for block in stage:
+            h = block(h, emb) if isinstance(block, ResBlock) else block(h)
+        return h

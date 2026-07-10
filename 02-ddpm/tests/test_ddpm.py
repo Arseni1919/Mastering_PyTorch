@@ -66,3 +66,30 @@ def test_sampling_ops_halve_and_double():
     x = torch.randn(2, 64, 16, 16)
     assert impl.Downsample(64)(x).shape == (2, 64, 8, 8)
     assert impl.Upsample(64)(x).shape == (2, 64, 32, 32)
+
+
+def test_unet_forward_shape():
+    net = load_impl(PROJECT).UNet()
+    out = net(torch.randn(2, 3, 32, 32), torch.randint(0, 1000, (2,)), torch.zeros(2).long())
+    assert out.shape == (2, 3, 32, 32)
+
+
+def test_unet_param_count_in_expected_range():
+    n = sum(p.numel() for p in load_impl(PROJECT).UNet().parameters())
+    assert 30e6 < n < 45e6, n
+
+
+def test_unet_accepts_null_label():
+    net = load_impl(PROJECT).UNet(n_classes=10)
+    out = net(torch.randn(1, 3, 32, 32), torch.zeros(1).long(), torch.full((1,), 10))
+    assert out.shape == (1, 3, 32, 32)
+
+
+def test_unet_is_conditional_on_label_and_time():
+    impl = load_impl(PROJECT)
+    seed_everything(0)
+    net = impl.UNet()
+    x, t = torch.randn(1, 3, 32, 32), torch.zeros(1).long()
+    a = net(x, t, torch.zeros(1).long())
+    assert not torch.allclose(a, net(x, t, torch.ones(1).long()))
+    assert not torch.allclose(a, net(x, torch.full((1,), 500), torch.zeros(1).long()))
