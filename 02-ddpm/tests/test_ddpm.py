@@ -93,3 +93,72 @@ def test_unet_is_conditional_on_label_and_time():
     a = net(x, t, torch.zeros(1).long())
     assert not torch.allclose(a, net(x, t, torch.ones(1).long()))
     assert not torch.allclose(a, net(x, torch.full((1,), 500), torch.zeros(1).long()))
+
+
+def test_q_sample_matches_closed_form():
+    impl = load_impl(PROJECT)
+    diff = impl.Diffusion(impl.UNet())
+    x0, noise = torch.randn(4, 3, 32, 32), torch.randn(4, 3, 32, 32)
+    t = torch.tensor([0, 1, 500, 999])
+    a = diff.abar[t][:, None, None, None]
+    assert torch.allclose(diff.q_sample(x0, t, noise), a.sqrt() * x0 + (1 - a).sqrt() * noise)
+
+
+def test_q_sample_endpoints_are_data_and_noise():
+    impl = load_impl(PROJECT)
+    diff = impl.Diffusion(impl.UNet())
+    x0, noise = torch.randn(1, 3, 32, 32), torch.ones(1, 3, 32, 32)
+    assert torch.allclose(diff.q_sample(x0, torch.zeros(1).long(), noise), x0, atol=1e-2)
+    assert torch.allclose(diff.q_sample(x0, torch.full((1,), 999), noise), noise, atol=1e-2)
+
+
+def test_p_losses_is_scalar_and_finite():
+    impl = load_impl(PROJECT)
+    diff = impl.Diffusion(impl.UNet())
+    loss = diff.p_losses(torch.randn(2, 3, 32, 32), torch.zeros(2).long())
+    assert loss.ndim == 0 and torch.isfinite(loss)
+
+
+def test_p_losses_drops_labels_to_null_token():
+    impl = load_impl(PROJECT)
+    diff = impl.Diffusion(impl.UNet())
+    seen = set()
+    original = diff.model.label_emb.forward
+    diff.model.label_emb.forward = lambda y: seen.update(y.tolist()) or original(y)
+    for _ in range(40):
+        diff.p_losses(torch.randn(8, 3, 32, 32), torch.zeros(8).long(), p_drop=0.5)
+    assert 10 in seen
+
+
+def test_eps_with_w_one_equals_conditional():
+    impl = load_impl(PROJECT)
+    seed_everything(0)
+    diff = impl.Diffusion(impl.UNet()).eval()
+    x, t, y = torch.randn(2, 3, 32, 32), torch.zeros(2).long(), torch.ones(2).long()
+    with torch.no_grad():
+        assert torch.allclose(diff.eps(x, t, y, w=1.0), diff.model(x, t, y), atol=1e-5)
+
+
+def test_samplers_return_correct_shape():
+    impl = load_impl(PROJECT)
+    diff = impl.Diffusion(impl.UNet(ch=32, mults=(1, 2)), T=20).eval()
+    y = torch.arange(2)
+    with torch.no_grad():
+        assert diff.ddim_sample(y, steps=4).shape == (2, 3, 32, 32)
+        assert diff.ddpm_sample(y).shape == (2, 3, 32, 32)
+
+
+def test_overfits_a_single_batch():
+    impl = load_impl(PROJECT)
+    seed_everything(0)
+    diff = impl.Diffusion(impl.UNet(ch=32, mults=(1, 2)), T=100)
+    opt = torch.optim.AdamW(diff.parameters(), lr=2e-3)
+    x0, y = torch.randn(4, 3, 32, 32), torch.arange(4) % 10
+    losses = []
+    for _ in range(400):
+        loss = diff.p_losses(x0, y, p_drop=0.0)
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+        losses.append(loss.item())
+    assert sum(losses[-20:]) / 20 < 0.5 * sum(losses[:20]) / 20

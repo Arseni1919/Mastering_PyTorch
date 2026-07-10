@@ -136,3 +136,53 @@ class UNet(nn.Module):
         for block in stage:
             h = block(h, emb) if isinstance(block, ResBlock) else block(h)
         return h
+
+
+class Diffusion(nn.Module):
+    def __init__(self, model, T=1000, n_classes=10):
+        super().__init__()
+        self.model, self.T, self.null = model, T, n_classes
+        self.register_buffer("abar", cosine_abar(T))
+
+    def q_sample(self, x0, t, noise):
+        a = self.abar[t][:, None, None, None]
+        return a.sqrt() * x0 + (1 - a).sqrt() * noise
+
+    def p_losses(self, x0, y, p_drop=0.1):
+        t = torch.randint(0, self.T, (x0.shape[0],), device=x0.device)
+        noise = torch.randn_like(x0)
+        y = torch.where(torch.rand(y.shape, device=y.device) < p_drop, self.null, y)
+        return F.mse_loss(self.model(self.q_sample(x0, t, noise), t, y), noise)
+
+    def eps(self, x, t, y, w):
+        cond, uncond = self.model(
+            torch.cat([x, x]), torch.cat([t, t]),
+            torch.cat([y, torch.full_like(y, self.null)]),
+        ).chunk(2)
+        return uncond + w * (cond - uncond)
+
+    @torch.no_grad()
+    def ddim_sample(self, y, steps=50, w=3.0):
+        x = torch.randn(len(y), 3, 32, 32, device=y.device)
+        ts = torch.linspace(self.T - 1, 0, steps).long().to(y.device)
+        for i, t in enumerate(ts):
+            e = self.eps(x, t.repeat(len(y)), y, w)
+            a = self.abar[t]
+            a_prev = self.abar[ts[i + 1]] if i + 1 < steps else torch.ones((), device=y.device)
+            x0 = ((x - (1 - a).sqrt() * e) / a.sqrt()).clamp(-1, 1)
+            x = a_prev.sqrt() * x0 + (1 - a_prev).sqrt() * e
+        return x
+
+    @torch.no_grad()
+    def ddpm_sample(self, y, w=3.0):
+        x = torch.randn(len(y), 3, 32, 32, device=y.device)
+        for t in reversed(range(self.T)):
+            e = self.eps(x, torch.full((len(y),), t, device=y.device), y, w)
+            a, a_prev = self.abar[t], self.abar[t - 1] if t else torch.ones((), device=y.device)
+            alpha, beta = a / a_prev, 1 - a / a_prev
+            mean = (x - beta / (1 - a).sqrt() * e) / alpha.sqrt()
+            if t == 0:
+                return mean
+            var = beta * (1 - a_prev) / (1 - a)
+            x = mean + var.sqrt() * torch.randn_like(x)
+        return x
