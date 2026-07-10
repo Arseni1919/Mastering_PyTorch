@@ -1,6 +1,7 @@
 import importlib.util
 import os
 import random
+import sys
 from pathlib import Path
 import modal
 import numpy as np
@@ -24,6 +25,7 @@ def load_impl(project_dir):
         f"{project_dir.name}_{name}", project_dir / f"{name}.py"
     )
     module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
 
