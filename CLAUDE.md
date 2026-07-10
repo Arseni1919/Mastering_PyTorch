@@ -24,13 +24,20 @@ These apply to all code files in this project, no exceptions.
 
 ## Layout
 
+Every sub-project is fully isolated. Nothing is shared across project folders — each carries its
+own `utils.py`, even where that duplicates another project's. A project must be readable, runnable,
+and copy-pasteable on its own. The "put it in `utils.py`" rule applies *within* a project.
+
 ```
 <NN>-<name>/
   README.md             the paper, the idea, the expected result
   model.py              reference implementation
   template.py           signature-only stubs to re-implement by hand
   train.py              Modal entrypoint
-  tests/test_<name>.py  numeric oracle, runs against either impl
+  utils.py              this project's shared helpers and Modal harness
+  tests/
+    conftest.py         puts the project dir on sys.path
+    test_<name>.py      numeric oracle, runs against either impl
 ```
 
 ## The Template Oracle
