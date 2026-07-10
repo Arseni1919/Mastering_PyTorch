@@ -83,12 +83,15 @@ MasteringPytorch/
   utils.py                shared across projects only
   <NN>-<name>/
     README.md             the paper, the idea, the expected result
-    model.py              reference implementation
+    model.py              reference implementation — one module
     template.py           signature-only stubs — you fill these in
     train.py              Modal entrypoint
     tests/test_<name>.py  the oracle
     assets/               generated samples, curves (gitignored except finals)
 ```
+
+Exactly one reference module per project, mirrored by exactly one `template.py`. Splitting the
+reference across files would force a matching split of the template and an asymmetric oracle.
 
 A function moves to root `utils.py` only once a second file needs it. No speculative shared
 layer.
@@ -145,19 +148,18 @@ sweep, and a loss curve. Samples recognizable as their class.
 
 ### Reference implementation
 
-`model.py`
+`model.py` — the UNet and the diffusion process in one module.
+
 - sinusoidal timestep embedding → 2-layer MLP
 - class embedding table with a null token for CFG
 - `ResBlock`: GroupNorm → SiLU → conv, timestep+class embedding added as a bias, residual
 - `Attention`: single-head self-attention at 16×16 resolution
 - `UNet`: base 128 channels, mults (1, 2, 2, 2), ~35M params
-
-`diffusion.py`
-- cosine noise schedule (improved DDPM)
-- `q_sample`: closed-form forward noising
-- `p_losses`: predict ε, MSE
-- `ddpm_sample`: ancestral, 1000 steps
-- `ddim_sample`: deterministic, 50 steps
+- `cosine_abar`: cosine noise schedule (improved DDPM)
+- `Diffusion.q_sample`: closed-form forward noising
+- `Diffusion.p_losses`: predict ε, MSE
+- `Diffusion.ddpm_sample`: ancestral, 1000 steps
+- `Diffusion.ddim_sample`: deterministic, 50 steps
 - classifier-free guidance: null-token dropout at 10% during training, scale `w` at sampling
 
 ### Training
