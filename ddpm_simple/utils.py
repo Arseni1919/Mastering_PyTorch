@@ -5,7 +5,7 @@ import torch
 image = modal.Image.debian_slim(python_version="3.12").uv_pip_install(
     "torch==2.13.0", "torchvision", "matplotlib"
 ).add_local_python_source("model", "my_dataset", "utils")
-app = modal.App("mastering-pytorch-ddpm")
+app = modal.App("mastering-pytorch-ddpm_simple")
 
 
 def corrupt(x, amount):

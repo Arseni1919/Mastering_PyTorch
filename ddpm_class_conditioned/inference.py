@@ -10,8 +10,6 @@ from tqdm.auto import tqdm
 from create_model import ClassConditionedUnet
 from get_data import dataset
 import modal
-
-
 image = modal.Image.debian_slim(
     python_version="3.12"
 ).uv_pip_install(
@@ -21,7 +19,7 @@ image = modal.Image.debian_slim(
 ).add_local_file(
     "model.pt", remote_path="/root/model.pt"
 )
-app = modal.App("mastering-pytorch-ddpm")
+app = modal.App("mastering-pytorch-ddpm_simple")
 
 num_train_timesteps = 1000
 

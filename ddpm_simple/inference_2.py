@@ -4,7 +4,7 @@ from torch.nn import functional as F
 from my_dataset import train_dataloader
 from matplotlib import pyplot as plt
 from utils import corrupt
-from model import BasicUNet
+from create_model import BasicUNet
 
 
 if __name__ == '__main__':

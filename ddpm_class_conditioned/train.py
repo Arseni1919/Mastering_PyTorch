@@ -8,18 +8,22 @@ from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
 from create_model import ClassConditionedUnet
 from get_data import dataset
-import modal
 import wandb
+import modal
 
-image = modal.Image.debian_slim(python_version="3.12").uv_pip_install(
+image = modal.Image.debian_slim(
+    python_version="3.12"
+).uv_pip_install(
     "torch==2.13.0", "torchvision", "matplotlib", "diffusers", "tqdm", "wandb"
-).add_local_python_source("create_model", "get_data")
-app = modal.App("mastering-pytorch-ddpm")
+).add_local_python_source(
+    "create_model", "get_data"
+)
+app = modal.App("mastering-pytorch-ddpm_simple")
 
 
 @app.function(image=image, gpu="A10G", timeout=3600, secrets=[modal.Secret.from_name("wandb-secret")])
 def train():
-    wandb.init(project="ddpm-mnist", config={"n_epochs": 10, "batch_size": 128, "lr": 1e-3})
+    wandb.init(project="ddpm_simple-mnist", config={"n_epochs": 10, "batch_size": 128, "lr": 1e-3})
     device = 'mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f'Using device: {device}')
     # Create a scheduler
