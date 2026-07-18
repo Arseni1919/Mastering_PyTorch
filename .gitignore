@@ -3,8 +3,14 @@ __pycache__/
 *.pyc
 .pytest_cache/
 data/
+mnist/
+**/mnist/
 *.pt
 *.ckpt
+*.gif
+*.mp4
+ddpm_simple/checkpoints/
+ddpm_simple/samples/
 assets/scratch/
 .DS_Store
 .superpowers/
