@@ -1,5 +1,7 @@
 # DDPM
 
+## Architecture
+
 ![unet2d_architecture.png](pics/unet2d_architecture.png)
 
 The core idea: it's a symmetric encoder-decoder where every down-block saves its output before downsampling, and the corresponding up-block concatenates that saved tensor before its own convs. Timestep info gets injected into every ResNet block along the way (not drawn — it'd clutter the diagram, but it matters).
