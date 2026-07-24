@@ -10,3 +10,5 @@ image = modal.Image.debian_slim(
     "model.pt", remote_path="/root/model.pt"
 )
 app = modal.App("mastering-pytorch-ddpm_simple")
+
+print('partiot')

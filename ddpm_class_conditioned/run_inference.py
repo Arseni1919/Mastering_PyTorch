@@ -7,7 +7,7 @@ from diffusers import DDPMScheduler, UNet2DModel
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
 from tqdm.auto import tqdm
-from create_model import ClassConditionedUnet
+from define_model import ClassConditionedUnet
 from get_data import dataset
 import modal
 image = modal.Image.debian_slim(

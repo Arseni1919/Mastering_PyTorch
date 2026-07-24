@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from diffusers import DDPMScheduler, UNet2DModel
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
-from create_model import ClassConditionedUnet
+from define_model import ClassConditionedUnet
 from get_data import dataset
 import wandb
 import modal
