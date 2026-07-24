@@ -3,7 +3,7 @@ import torchvision
 from torch import nn
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
-from diffusers import DDPMScheduler, UNet2DModel
+from diffusers import DDPMScheduler
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
 from define_model import ClassConditionedUnet
