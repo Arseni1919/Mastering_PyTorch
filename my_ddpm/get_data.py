@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
 dataset = torchvision.datasets.MNIST(root='mnist', train=True, download=True, transform=transforms.Compose([
+  transforms.Pad(2),
   transforms.ToTensor()
 ]))
 dataloader = DataLoader(dataset, batch_size=8, shuffle=True)

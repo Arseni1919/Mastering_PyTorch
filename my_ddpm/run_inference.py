@@ -25,7 +25,8 @@ app = modal.App("mastering-pytorch-my_ddpm")
 
 
 def run_inference():
-    device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.mps.is_available() else 'cpu'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    # device = 'cpu'
     noise_scheduler: DDPMScheduler = DDPMScheduler(
         num_train_timesteps=config.num_train_timesteps, beta_schedule='squaredcos_cap_v2'
     )
@@ -41,7 +42,7 @@ def run_inference():
         with torch.no_grad():
             pred = net(x, adapted_timestamp, y)
         x = noise_scheduler.step(pred, timestamp, x).prev_sample
-        yield {'type': 'img', 'x': x, 'timestamp': timestamp.item()}
+        yield {'type': 'img', 'x': x.cpu(), 'timestamp': timestamp.item()}
 
 
 @app.function(image=image, gpu="A10G", timeout=3600, secrets=[modal.Secret.from_name("wandb-secret")])
@@ -52,26 +53,34 @@ def modal_run_inference():
 
 @app.local_entrypoint()
 def modal_main():
+    x_list = []
     for chunk in modal_run_inference.remote_gen():
         if chunk['type'] == 'img':
             timestamp = chunk['timestamp']
             x: torch.Tensor | Any = chunk['x']
             if timestamp % 50 == 0:
-                show_x = x.cpu().detach().permute(0, 2, 3, 1).reshape(280, 28, 1).numpy()
+                show_x = x.permute(0, 2, 3, 1).reshape(10*config.side_size, config.side_size, 1).numpy()
                 show_x = (show_x + 1) / 2
-                utils.plot_image(show_x)
+                x_list.append(show_x)
+    print('Start to show...')
+    for show_x in x_list:
+        utils.plot_image(show_x)
     plt.show()
 
 
 def main():
+    x_list = []
     for chunk in run_inference():
         if chunk['type'] == 'img':
             timestamp = chunk['timestamp']
             x: torch.Tensor | Any = chunk['x']
-            if timestamp % 100 == 0:
-                show_x = x.cpu().detach().permute(0, 2, 3, 1).reshape(280, 28, 1).numpy()
+            if timestamp % 50 == 0:
+                show_x = x.cpu().detach().permute(0, 2, 3, 1).reshape(10*config.side_size, config.side_size, 1).numpy()
                 show_x = (show_x + 1) / 2
-                utils.plot_image(show_x)
+                x_list.append(show_x)
+    # print('Start to show...')
+    for show_x in x_list:
+        utils.plot_image(show_x, pause_time=0.5)
     plt.show()
 
 

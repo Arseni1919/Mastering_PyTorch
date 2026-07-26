@@ -46,6 +46,7 @@ def train_epoch(device, dataloader, noise_scheduler, net, loss_fn, optimizer):
 
 def train_process():
     device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.mps.is_available() else 'cpu'
+    print(f'--- DEVICE: {device} ---')
     dataloader = DataLoader(dataset, batch_size=config.batch_size, shuffle=True)
     noise_scheduler: DDPMScheduler = DDPMScheduler(
         num_train_timesteps=config.num_train_timesteps, beta_schedule='squaredcos_cap_v2'
@@ -66,9 +67,9 @@ def train_process():
         all_losses.extend(log_losses)
         msg = f'\n--- {epoch=} | {avg_loss=} ---'
         print(msg)
-        yield {'type': 'log', 'msg': msg}
+        yield {'type': 'log', 'msg': msg, 'state_dict': {k: v.cpu() for k, v in net.state_dict().items()}}
     wandb.finish()
-    yield {'type': 'final', 'state_dict': net.cpu().state_dict(), 'all_losses': all_losses}
+    yield {'type': 'final', 'state_dict': {k: v.cpu() for k, v in net.state_dict().items()}, 'all_losses': all_losses}
 
 
 @app.function(image=image, gpu="A10G", timeout=3600, secrets=[modal.Secret.from_name("wandb-secret")])

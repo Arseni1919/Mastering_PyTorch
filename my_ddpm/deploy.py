@@ -45,10 +45,9 @@ app = modal.App("mastering-pytorch-my_ddpm")
 
 
 def run_inference():
-    device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.mps.is_available() else 'cpu'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # device = 'cpu'
     print(f'--- DEVICE: {device} ---')
-
     noise_scheduler: DDPMScheduler = DDPMScheduler(
         num_train_timesteps=config.num_train_timesteps, beta_schedule='squaredcos_cap_v2'
     )
@@ -106,45 +105,44 @@ def modal_run_inference():
 
 @app.local_entrypoint()
 def modal_main():
+    x_list = []
     for chunk in modal_run_inference.remote_gen():
         x: torch.Tensor | Any = chunk['x']
-        # if chunk['type'] == 'img':
-        #     timestamp = chunk['timestamp']
-        #     if timestamp % 50 == 0:
-        #         show_x = x.permute(0, 2, 3, 1).reshape(280, 28, 1).numpy()
-        #         show_x = (show_x + 1) / 2
-        #         utils.plot_image(show_x)
+        if chunk['type'] == 'img':
+            timestamp = chunk['timestamp']
+            if timestamp % 50 == 0:
+                show_x = x.permute(0, 2, 3, 1).reshape(10*config.side_size, config.side_size, 1).numpy()
+                show_x = (show_x + 1) / 2
+                x_list.append(show_x)
         if chunk['type'] == 'final':
-            show_x = x.permute(0, 2, 3, 1).reshape(280, 28, 1).numpy()
-            show_x = (show_x + 1) / 2
-            utils.plot_image(show_x)
-            plt.show()
             log_periods = chunk['log_periods']
-            n = len(log_periods)
             print(f'mean: {np.mean(log_periods[200:])}')
             print(f'std: {np.std(log_periods[200:])}')
             print(f'max: {np.max(log_periods[200:])}')
-            # plt.plot(list(range(200, n)), log_periods[200:])
+    input('Press enter to show...')
+    for show_x in x_list:
+        utils.plot_image(show_x, pause_time=0.5)
     plt.show()
 
 
 def main():
+    x_list = []
     for chunk in run_inference():
         if chunk['type'] == 'img':
             timestamp = chunk['timestamp']
             x: torch.Tensor | Any = chunk['x']
-            if timestamp % 100 == 0:
-                show_x = x.cpu().detach().permute(0, 2, 3, 1).reshape(280, 28, 1).numpy()
+            if timestamp % 50 == 0:
+                show_x = x.cpu().detach().permute(0, 2, 3, 1).reshape(10*config.side_size, config.side_size, 1).numpy()
                 show_x = (show_x + 1) / 2
-                utils.plot_image(show_x)
+                x_list.append(show_x)
         if chunk['type'] == 'final':
             log_periods = chunk['log_periods']
             print(f'mean: {np.mean(log_periods[200:])}')
             print(f'std: {np.std(log_periods[200:])}')
             print(f'max: {np.max(log_periods[200:])}')
-            # plt.close()
-            # n = len(log_periods)
-            # plt.plot(list(range(200, n)), log_periods[200:])
+    input('Press enter to show...')
+    for show_x in x_list:
+        utils.plot_image(show_x, pause_time=0.5)
     plt.show()
 
 

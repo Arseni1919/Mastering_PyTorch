@@ -172,15 +172,28 @@ class MyUNetClassConditionedModel(nn.Module):
         self.conv_out = nn.Conv2d(
             in_channels=base_ch, out_channels=ch, kernel_size=3, padding=1
         )
-        self.down_blocks = nn.ModuleList([
-            DownBlock(in_channels=base_ch, out_channels=base_ch*2, has_attn=has_attn, num_groups=4),
-            DownBlock(in_channels=base_ch*2, out_channels=base_ch*4, has_attn=has_attn, num_groups=4),
-        ])
-        self.mid_block = MidBlock(num_channels=base_ch*4, num_groups=config.num_groups)
-        self.up_blocks = nn.ModuleList([
-            UpBlock(in_channels=base_ch*4, out_channels=base_ch*2, has_attn=has_attn, num_groups=4),
-            UpBlock(in_channels=base_ch*2, out_channels=base_ch, has_attn=has_attn, num_groups=4),
-        ])
+        self.down_blocks = nn.ModuleList()
+        for i in range(config.num_layers):
+            in_channels = base_ch * 2**i
+            out_channels = base_ch * 2**(i+1)
+            down_block = DownBlock(in_channels=in_channels, out_channels=out_channels, has_attn=has_attn, num_groups=config.num_groups)
+            self.down_blocks.append(down_block)
+        # self.down_blocks = nn.ModuleList([
+        #     DownBlock(in_channels=base_ch, out_channels=base_ch*2, has_attn=has_attn, num_groups=4),
+        #     DownBlock(in_channels=base_ch*2, out_channels=base_ch*4, has_attn=has_attn, num_groups=4),
+        # ])
+        num_channels = base_ch * (2**config.num_layers)
+        self.mid_block = MidBlock(num_channels=num_channels, num_groups=config.num_groups)
+        self.up_blocks = nn.ModuleList()
+        for i in reversed(range(config.num_layers)):
+            in_channels = base_ch * 2**(i+1)
+            out_channels = base_ch * 2**i
+            up_block = UpBlock(in_channels=in_channels, out_channels=out_channels, has_attn=has_attn, num_groups=config.num_groups)
+            self.up_blocks.append(up_block)
+        # self.up_blocks = nn.ModuleList([
+        #     UpBlock(in_channels=base_ch*4, out_channels=base_ch*2, has_attn=has_attn, num_groups=4),
+        #     UpBlock(in_channels=base_ch*2, out_channels=base_ch, has_attn=has_attn, num_groups=4),
+        # ])
 
 
     def forward(self, x, t, class_labels):
