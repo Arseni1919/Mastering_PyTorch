@@ -6,9 +6,15 @@ data/
 mnist/
 **/mnist/
 *.pt
+*.pth
 *.ckpt
+*.onnx
+*.onnx.data
+*.safetensors
 *.gif
 *.mp4
+trace.json
+wandb/
 ddpm_simple/checkpoints/
 ddpm_simple/samples/
 assets/scratch/

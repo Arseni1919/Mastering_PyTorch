@@ -43,3 +43,10 @@ class ClassConditionedUnet(nn.Module):
 
         # Feed this to the UNet alongside the timestep and return the prediction
         return self.model(net_input, t).sample  # (bs, 1, 28, 28)
+
+
+
+if __name__ == '__main__':
+    c, h, w = 1, 24, 24
+    net = ClassConditionedUnet()
+    net(torch.rand(1, c, h, w), torch.rand(1, c, h, w),  torch.randint(10, (1,)))

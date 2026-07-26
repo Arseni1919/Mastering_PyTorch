@@ -21,7 +21,7 @@ image = modal.Image.debian_slim(
 app = modal.App("mastering-pytorch-ddpm_simple")
 
 
-@app.function(image=image, gpu="A10G", timeout=3600, secrets=[modal.Secret.from_name("wandb-secret")])
+# @app.function(image=image, gpu="A10G", timeout=3600, secrets=[modal.Secret.from_name("wandb-secret")])
 def train():
     wandb.init(project="ddpm_simple-mnist", config={"n_epochs": 10, "batch_size": 128, "lr": 1e-3})
     device = 'mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu'
