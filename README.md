@@ -13,7 +13,7 @@
 - `define_model` - definition of the main model that we want to train
 - `train` - in this script we train the model and save it
 - `run_inference` - we upload the trained model and run it though examples to show the results
-- `deploy` (optional) - to create the production version of the model
+- `run_deploy.py` (optional) - to create the production version of the model
 
 
 ## ✅ DONE

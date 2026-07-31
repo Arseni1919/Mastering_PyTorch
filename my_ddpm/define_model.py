@@ -5,6 +5,8 @@ from config import config
 
 
 def sinusoidal_embedding(t: torch.Tensor, dim):
+     # if t < 1:
+     #    print()
      half = dim // 2
      freqs = torch.exp(-torch.log(torch.tensor(10000)) * torch.arange(half) / half).to(t.device)
      args = torch.unsqueeze(t, -1) * freqs
@@ -216,7 +218,7 @@ class MyUNetClassConditionedModel(nn.Module):
         class_cond = class_cond.view(bs, class_cond.shape[1], 1, 1).expand(bs, class_cond.shape[1], h, w)
         x = torch.cat([x, class_cond], dim=1)
         # to add time conditioning
-        t_emb = sinusoidal_embedding(t, config.time_emb_size)
+        t_emb = sinusoidal_embedding(t , config.time_emb_size)
         t_emb = self.time_embedding(t_emb)
         # main
         x = self.conv_in(x)

@@ -3,10 +3,8 @@ import matplotlib.pyplot as plt
 import torch
 from get_data import dataset
 from config import config
-from diffusers import DDIMScheduler
-from define_model import MyUNetClassConditionedModel
+from define_model import DiTFullModel
 import modal
-import utils
 from tqdm import tqdm
 
 
@@ -22,43 +20,51 @@ image = modal.Image.debian_slim(
 app = modal.App("mastering-pytorch-my_ddpm")
 
 
+def plot_image(image, timestamp, model_config, pause_time=0.01):
+    plt.cla()
+    plt.imshow(image)
+    plt.title(
+        f'timestamp: {timestamp + 1}\n'
+        f'hidden_size={model_config.hidden_size} | '
+        f'num_layers={model_config.num_layers} | '
+        f'n_epochs={model_config.n_epochs}'
+    )
+    plt.pause(pause_time)
 
 
 def run_inference():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    # device = 'cpu'
-    num_inference_steps = 50
-    step_size = 1 / num_inference_steps
+    step_size = 1 / config.num_inference_steps
     example_x, _ = dataset[0]
     bs = 10
     ch, height, width = example_x.shape
-    net: MyUNetClassConditionedModel = MyUNetClassConditionedModel(example_x=example_x).to(device)
+    net: DiTFullModel = DiTFullModel(
+        side=config.side_size,
+        path_side=config.patch_size,
+        head_dim=config.hidden_size // config.num_heads,
+        hidden_size=config.hidden_size,
+        num_classes=config.num_classes,
+        class_emb_size=config.class_emb_size,
+        time_emb_size=config.time_emb_size,
+        num_layers=config.num_layers,
+        num_heads=config.num_heads,
+        mlp_ratio=config.mlp_ratio,
+        channels=config.channels
+    )
     net.load_state_dict(state_dict=torch.load('saved_model.pt', map_location=device))
     net.eval()
     print(f'num params: {sum(p.numel() for p in net.parameters())}')
     x = torch.randn((bs, ch, height, width), device=device)
-    y = torch.arange(0, bs, device=device).long()
+    y = torch.arange(0, 10, device=device).long()
     t = 0.0
 
-    for _ in tqdm(range(num_inference_steps)):
+    for _ in tqdm(range(config.num_inference_steps)):
         t_tensor = torch.ones((bs,)) * t
         with torch.no_grad():
             pred = net(x, t_tensor, y)
         x += step_size * pred
         t += step_size
         yield {'type': 'img', 'x': x.cpu(), 'timestamp': t}
-
-
-    # noise_scheduler: DDIMScheduler = DDIMScheduler(
-    #     num_train_timesteps=config.num_train_timesteps, beta_schedule='squaredcos_cap_v2'
-    # )
-    # noise_scheduler.set_timesteps(50)
-    # for timestamp in tqdm(noise_scheduler.timesteps):
-    #     adapted_timestamp = timestamp.expand(x.shape[0]).to(device)
-    #     with torch.no_grad():
-    #         pred = net(x, adapted_timestamp, y)
-    #     x = noise_scheduler.step(pred, timestamp, x).prev_sample
-    #     yield {'type': 'img', 'x': x.cpu(), 'timestamp': timestamp.item()}
 
 
 @app.function(image=image, gpu="A10G", timeout=3600, secrets=[modal.Secret.from_name("wandb-secret")])
@@ -72,15 +78,13 @@ def modal_main():
     x_list = []
     for chunk in modal_run_inference.remote_gen():
         if chunk['type'] == 'img':
-            timestamp = chunk['timestamp']
             x: torch.Tensor | Any = chunk['x']
-            if timestamp % 50 == 0:
-                show_x = x.permute(0, 2, 3, 1).reshape(10*config.side_size, config.side_size, 1).numpy()
-                show_x = (show_x + 1) / 2
-                x_list.append(show_x)
+            show_x = x.permute(0, 2, 3, 1).reshape(10*config.side_size, config.side_size, 1).numpy()
+            show_x = (show_x + 1) / 2
+            x_list.append(show_x)
     print('Start to show...')
-    for show_x in x_list:
-        utils.plot_image(show_x)
+    for t, show_x in enumerate(x_list):
+        plot_image(show_x, t, config, pause_time=0.05)
     plt.show()
 
 
@@ -93,8 +97,8 @@ def main():
             show_x = (show_x + 1) / 2
             x_list.append(show_x)
     print('Start to show...')
-    for show_x in x_list:
-        utils.plot_image(show_x, pause_time=0.05)
+    for t, show_x in enumerate(x_list):
+        plot_image(show_x, t, config, pause_time=0.05)
     plt.show()
 
 

@@ -146,7 +146,7 @@ rescale x from [-1,1] back to [0,1] for display
 ```
 **Gotchas:** `net(...)` and `noise_scheduler.step(...)` need `t` in *different* shapes — the model needs `(bs,)` on-device, but the scheduler's internal `alphas_cumprod` lookup wants the original scalar `t` as yielded by `noise_scheduler.timesteps`, unmodified. Keep both variables around, don't overwrite one with the other.
 
-## 5. Deploy — ONNX export only (`deploy.py`)
+## 5. Deploy — ONNX export only (`run_deploy.py`)
 
 ```txt
 # export once, offline (not in the hot loop):

@@ -9,6 +9,7 @@ from torch.nn import MSELoss
 import wandb
 import modal
 import utils
+import random
 
 
 image = modal.Image.debian_slim(
@@ -27,12 +28,21 @@ def train_epoch(device, dataloader, noise_scheduler, net, loss_fn, optimizer):
     n = len(dataloader)
     for i, (x, y) in enumerate(dataloader):
         x = x.to(device) * 2 - 1
+        bs, ch, height, width = x.shape
         y = y.to(device)
-        noise = torch.randn_like(x).to(device)
-        rand_timesteps = torch.randint(0, 999, (x.shape[0],)).long().to(device)
-        noisy_x = noise_scheduler.add_noise(x, noise, rand_timesteps)
-        pred = net(noisy_x, rand_timesteps, y)
-        loss = loss_fn(pred, noise)
+        t = torch.rand((bs,)).to(device)
+        reshaped_t = t.view((bs, 1, 1, 1))
+        x_0 = torch.randn_like(x).to(device)
+        x_1: torch.Tensor = x
+        x_t = (1 - reshaped_t) * x_0 + reshaped_t * x_1
+        target = x_1 - x_0
+        pred = net(x_t, t, y)
+        loss = loss_fn(pred, target)
+        # noise = torch.randn_like(x).to(device)
+        # rand_timesteps = torch.randint(0, 999, (bs,)).long().to(device)
+        # noisy_x = noise_scheduler.add_noise(x, noise, rand_timesteps)
+        # pred = net(noisy_x, rand_timesteps, y)
+        # loss = loss_fn(pred, noise)
         net.zero_grad()
         loss.backward()
         optimizer.step()
