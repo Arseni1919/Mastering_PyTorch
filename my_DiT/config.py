@@ -7,7 +7,7 @@ class Config:
     class_emb_size: int = 8
     time_emb_size: int = 8
     patch_size: int = 4
-    hidden_size: int = 64
+    hidden_size: int = 256
     num_heads: int = 4
     num_layers: int = 6
     mlp_ratio: int = 4

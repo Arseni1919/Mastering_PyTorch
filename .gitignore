@@ -5,6 +5,8 @@ __pycache__/
 data/
 mnist/
 **/mnist/
+cifar
+**/cifar/
 *.pt
 *.pth
 *.ckpt
