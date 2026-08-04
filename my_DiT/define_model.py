@@ -6,8 +6,6 @@ from config import config
 
 
 def build_2d_rope(num_patches_per_side, head_dim):
-    """
-    """
     quater = head_dim // 4
     arrange_list = torch.arange(num_patches_per_side)
     # step 1
@@ -287,9 +285,6 @@ class DiTFullModel(nn.Module):
         tokens = self.final_layer(tokens, cond)
         out = unpatchify(tokens, self.path_side, self.channels, self.side)
         return out
-
-
-
 
 
 def check():

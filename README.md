@@ -19,6 +19,12 @@
 ## ✅ DONE
 
 ### Images
+
+- DDPM
+- DDIM
+- Flow Matching
+- VAE
+
 ### Text
 ### Audio
 ### Video
@@ -27,12 +33,21 @@
 ### Robotics
 ### Agents
 ### RL
+### 3D
+
 
 
 ## 📋TODO
 
-- ddpm
 - chatgpt
+
+
+## Credits
+
+- [HF | Diffusion Models from Scratch
+](https://huggingface.co/learn/diffusion-course/en/unit1/3)
+- [KTH Action Recognition Dataset](https://www.kaggle.com/datasets/vafaeii/kth-action-recognition-dataset?resource=download)
+- [Moving MNIST](https://www.cs.toronto.edu/~nitish/unsupervised_video/)
 
 
 
