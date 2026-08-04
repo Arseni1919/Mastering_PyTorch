@@ -55,7 +55,7 @@ def run_inference():
         t = torch.zeros(1).to(device)
         class_labels = torch.randint(0, config.num_classes, (1,)).to(device)
         first_class_index = int(class_labels[0].item())
-        print(f'{first_class_index=}')
+        print(f'{first_class_index=} -> {dataset.classes[first_class_index]}')
         step_size = 1 / config.num_inference_steps
         for _ in tqdm(range(config.num_inference_steps)):
             with torch.no_grad():

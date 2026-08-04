@@ -28,6 +28,9 @@
 ### Text
 ### Audio
 ### Video
+
+- LTX-Video
+
 ### Tabular
 ### Time-Series
 ### Robotics

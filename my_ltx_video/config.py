@@ -21,17 +21,15 @@ class Config:
     vae_blocks_per_stage: int = 2
     num_classes: int = 6
     class_emb_size: int = 8
-    hidden_size: int = 96
+    hidden_size: int = 192
     num_heads: int = 4
-    num_layers: int = 4
+    num_layers: int = 6
     mlp_ratio: int = 4
     n_epochs_vae: int = 20
     n_epochs_dit: int = 20
     batch_size: int = 16
     learning_rate: float = 1e-4
-    disc_learning_rate: float = 1e-4
-    num_inference_steps: int = 20
-    image_cond_prob: float = 0.5
+    num_inference_steps: int = 50
     vae_model_name: str = 'saved_vae_model'
 
 
