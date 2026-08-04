@@ -27,7 +27,7 @@ class Config:
     mlp_ratio: int = 4
     n_epochs_vae: int = 20
     n_epochs_dit: int = 20
-    batch_size: int = 64
+    batch_size: int = 16
     learning_rate: float = 1e-4
     disc_learning_rate: float = 1e-4
     num_inference_steps: int = 20
