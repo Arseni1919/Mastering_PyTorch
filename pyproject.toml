@@ -8,11 +8,12 @@ dependencies = [
     "lpips>=0.1.4",
     "matplotlib>=3.11.0",
     "modal>=1.5.1",
-    "onnxruntime>=1.28.0",
     "onnxscript>=0.7.1",
+    "shimmy>=2.0.1",
     "torch>=2.13.0",
     "torchcodec>=0.15.0",
     "torchvision>=0.28.0",
+    "transformers>=5.14.1",
     "wandb>=0.28.0",
 ]
 

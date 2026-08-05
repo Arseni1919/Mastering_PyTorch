@@ -26,6 +26,9 @@
 - VAE
 
 ### Text
+
+- GPT-2 + LoRA
+
 ### Audio
 ### Video
 
