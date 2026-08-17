@@ -17,7 +17,7 @@ A from-scratch reimplementation of I-JEPA (arXiv 2301.08243) on MNIST, with one 
 - `context_scale_range` (**(0.85, 1.0)**)
 - `sigreg_lambda` (**0.05**) — LeJEPA's recommended starting point for λ
 - `sigreg_num_slices` (**256**) — random projection directions; smaller than LeJEPA's ImageNet-scale defaults (1024+), appropriate for this toy embedding dimension
-- `batch_size` (**64**), `learning_rate` (**1e-3**), `epochs` (**10**)
+- `batch_size` (**64**), `lr` (**1e-3**), `epochs` (**10**)
 
 ## 1. Data — `get_data.py`
 

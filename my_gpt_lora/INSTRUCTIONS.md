@@ -11,7 +11,7 @@ A from-scratch implementation of LoRA (Low-Rank Adaptation), applied to a pretra
 - `target_modules` (**['c_attn', 'c_proj']**) — which projection layers inside each transformer block get wrapped with LoRA
 - `block_size` (**128**) — sequence length per training example
 - `batch_size` (**16**)
-- `learning_rate` (**1e-4**)
+- `lr` (**1e-4**)
 - `n_epochs` (**3**)
 
 **Gotcha:** HuggingFace's GPT-2 implementation uses its own `Conv1D` layer for `c_attn`/`c_proj`, not `nn.Linear`. `Conv1D`'s weight is shaped `(in_features, out_features)` — the transpose of `nn.Linear`'s `(out_features, in_features)`. Every section below that touches a base layer's weight shape needs to know which convention it's dealing with.

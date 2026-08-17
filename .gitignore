@@ -7,6 +7,8 @@ mnist/
 **/mnist/
 cifar
 **/cifar/
+stl10
+**/stl10/
 KTH_Action/
 **/KTH_Action/
 *.pt

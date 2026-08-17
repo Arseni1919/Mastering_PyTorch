@@ -63,7 +63,7 @@ def train_procedure():
     for p in encoder.parameters():
         p.requires_grad = False
     print(f'encoder num params: {sum(p.numel() for p in net.parameters())}')
-    optimizer = torch.optim.Adam(net.parameters(), lr=config.learning_rate)
+    optimizer = torch.optim.Adam(net.parameters(), lr=config.lr)
     loss_fn: nn.MSELoss = nn.MSELoss(reduction='mean')
     n_datapoints = len(dataloader)
 

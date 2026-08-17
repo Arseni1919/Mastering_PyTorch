@@ -4,7 +4,7 @@ A from-scratch spec for `my_dit/`: a Diffusion Transformer (DiT) trained via flo
 
 ## 0. Config
 
-Fields you'll need: `num_classes`, `class_emb_size`, `time_emb_size`, `patch_size`, `hidden_size` (token embedding dim), `num_heads`, `num_layers` (transformer blocks), `mlp_ratio` (hidden width multiplier inside each block's MLP), `side_size`, `n_epochs`, `batch_size`, `learning_rate`, `num_inference_steps`.
+Fields you'll need: `num_classes`, `class_emb_size`, `time_emb_size`, `patch_size`, `hidden_size` (token embedding dim), `num_heads`, `num_layers` (transformer blocks), `mlp_ratio` (hidden width multiplier inside each block's MLP), `side_size`, `n_epochs`, `batch_size`, `lr`, `num_inference_steps`.
 
 **Constraint:** `side_size` must be divisible by `patch_size` (patchify needs to tile the image exactly, no leftover pixels). `hidden_size` must be divisible by `num_heads` (each head gets an equal slice of the embedding).
 

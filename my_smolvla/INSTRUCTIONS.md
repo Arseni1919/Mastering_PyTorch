@@ -13,7 +13,7 @@ A from-scratch reimplementation of SmolVLA's novel piece — the Action Expert �
 - `num_flow_matching_steps` (**10**) — inference-time integration steps
 - `meta_world_tasks` (a short list, e.g. **['reach-v2', 'button-press-v2', 'door-open-v2', 'drawer-open-v2', 'window-open-v2']**) — start small; scale up once this subset works
 - `batch_size` (**32**)
-- `learning_rate` (**1e-4**)
+- `lr` (**1e-4**)
 - `train_steps` (**5000**) — a fraction of the paper's 200k-step pretraining run, appropriate for a single task subset rather than 481 community datasets
 
 ## 1. Data — `get_data.py`

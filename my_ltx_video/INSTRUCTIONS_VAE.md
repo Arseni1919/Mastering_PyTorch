@@ -15,7 +15,7 @@ Simplest paper-related Video-VAE from *LTX-Video* (arXiv 2501.00103): causal 3D 
 - `vae_kl_weight` (**0.3**)
 - `num_temporal_downsample_stages` (**1**) — see section 13; how many of the `num_downsample_stages - 1` stages also halve time, in addition to halving space
 - `batch_size` (**4**)
-- `learning_rate` (**1e-4**)
+- `lr` (**1e-4**)
 - `n_epochs` (**15**)
 
 Latent shape: `(channels=8, T=num_frames / 2^num_temporal_downsample_stages, H=W=side_size / (vae_patch_size * 2^(num_downsample_stages-1)))` — with the values above, `(8, 4, 8, 8)`.

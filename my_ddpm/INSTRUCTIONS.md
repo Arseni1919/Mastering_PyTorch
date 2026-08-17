@@ -4,7 +4,7 @@ A from-scratch spec for `my_ddpm/`. Pseudocode only — fill in the real PyTorch
 
 ## 0. Config
 
-Fields you'll need across the files below: `num_classes`, `class_emb_size`, `time_emb_size`, `num_groups`, `base_channels`, `num_layers`, `has_attn`, `side_size`, `n_epochs`, `batch_size`, `learning_rate`, `num_train_timesteps`, `onnx_path`.
+Fields you'll need across the files below: `num_classes`, `class_emb_size`, `time_emb_size`, `num_groups`, `base_channels`, `num_layers`, `has_attn`, `side_size`, `n_epochs`, `batch_size`, `lr`, `num_train_timesteps`, `onnx_path`.
 
 **Constraint:** `side_size` must be divisible by `2^num_layers` (each down-stage halves spatial size; the up-path always doubles via a fixed-factor upsample, so an odd intermediate size makes the two paths disagree). MNIST is natively 28×28 — pad it to a clean multiple (e.g. 32) rather than fighting this.
 

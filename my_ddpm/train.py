@@ -63,7 +63,7 @@ def train_process():
     )
     example_x, _ = dataset[0]
     net = MyUNetClassConditionedModel(example_x=example_x).to(device)
-    optimizer = Adam(net.parameters(), lr=config.learning_rate)
+    optimizer = Adam(net.parameters(), lr=config.lr)
     loss_fn = MSELoss()
 
     wandb.init(project='my_ddpm', config=config)

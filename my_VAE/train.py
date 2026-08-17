@@ -44,7 +44,7 @@ def train_procedure():
         latent_dim=config.latent_dim
     ).to(device)
     print(f'num params: {sum(p.numel() for p in net.parameters())}\n')
-    optim = torch.optim.Adam(net.parameters(), lr=config.learning_rate)
+    optim = torch.optim.Adam(net.parameters(), lr=config.lr)
     loss_fn = nn.MSELoss(reduction='sum')
     wandb.init(project='my_vae', config=config)
 

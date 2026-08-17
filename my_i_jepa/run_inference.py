@@ -15,7 +15,7 @@ def collect_features_and_labels(n_per_class: int = 100):
         image_size=config.image_size,
         patch_size=config.patch_size,
         in_channels=config.in_channels,
-        embed_dim=config.embed_size,
+        encoder_embed_dim=config.encoder_embed_dim,
         encoder_depth=config.encoder_depth,
         encoder_num_heads=config.encoder_num_heads,
         predictor_embed_dim=config.predictor_embed_dim,
@@ -23,11 +23,13 @@ def collect_features_and_labels(n_per_class: int = 100):
         predictor_num_heads=config.predictor_num_heads,
         sigreg_num_slices=config.sigreg_num_slices,
         sigreg_lambda=config.sigreg_lambda,
-        M=4,
+        num_target_blocks=config.num_target_blocks,
         target_scale_range=config.target_scale_range,
         target_aspect_ratio_range=config.target_aspect_ratio_range,
-        context_scale_range=config.context_scale_range
-    )
+        context_scale_range=config.context_scale_range,
+        ema_start=config.ema_start,
+        ema_end=config.ema_end
+    ).to(device)
     model.load_state_dict(torch.load('state_dict.pt', map_location=device))
     model.to(device)
     model.eval()
@@ -44,13 +46,14 @@ def collect_features_and_labels(n_per_class: int = 100):
     labels = []
 
     with torch.no_grad():
-        for label, imgs in data_dict.items():
+        for i, (label, imgs) in enumerate(data_dict.items()):
+            print(f'{i}/{len(data_dict.items())}')
             for x in imgs[:n_per_class]:
                 x = x.to(device)
                 if x.dim() == 3:          # (C, H, W) -> add batch dim
                     x = x.unsqueeze(0)
 
-                pred = model.encoder(x)   # likely (1, num_patches, embed_dim)
+                pred = model.target_encoder(x)   # likely (1, num_patches, embed_dim)
 
                 # Pool patch tokens down to a single vector per image.
                 # If your encoder already returns (1, embed_dim) or (embed_dim,),
@@ -102,7 +105,7 @@ def plot_tsne(X, y, save_path: str = 'tsne_plot.png', use_pca_init: bool = True)
 
 
 def main():
-    X, y = collect_features_and_labels(n_per_class=100)
+    X, y = collect_features_and_labels(n_per_class=200)
     plot_tsne(X, y)
 
 

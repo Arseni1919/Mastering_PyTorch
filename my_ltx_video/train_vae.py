@@ -55,8 +55,8 @@ def train_procedure():
     ).to(device)
     print(f'encoder num params: {sum(p.numel() for p in encoder.parameters())}')
     print(f'decoder num params: {sum(p.numel() for p in decoder.parameters())}')
-    encoder_optimizer = torch.optim.Adam(encoder.parameters(), lr=config.learning_rate)
-    decoder_optimizer = torch.optim.Adam(decoder.parameters(), lr=config.learning_rate)
+    encoder_optimizer = torch.optim.Adam(encoder.parameters(), lr=config.lr)
+    decoder_optimizer = torch.optim.Adam(decoder.parameters(), lr=config.lr)
     n_datapoints = len(dataloader)
     lpips_loss_fn = lpips.LPIPS(net='alex').to(device)  # or net='alex' for lighter/faster
     for p in lpips_loss_fn.parameters():

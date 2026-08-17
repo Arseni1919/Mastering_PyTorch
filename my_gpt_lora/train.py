@@ -35,7 +35,7 @@ def train_procedure():
     print(f'encoder num params: {sum(p.numel() for p in model.parameters())}')
     optimizer = torch.optim.Adam(
         [p for p in model.parameters() if p.requires_grad],
-        lr=config.learning_rate
+        lr=config.lr
     )
     n_datapoints = len(dataloader)
 

@@ -4,7 +4,7 @@ A from-scratch spec for `my_VAE/`: an unconditional Variational Autoencoder trai
 
 ## 0. Config
 
-Fields you'll need: `channels` (3 for CIFAR-10), `side_size` (32), `base_channels`, `latent_dim`, `n_epochs`, `batch_size`, `learning_rate`, `kl_weight` (weighting on the KL term, aka β in β-VAE), `num_interpolation_steps` (for the inference interpolation test).
+Fields you'll need: `channels` (3 for CIFAR-10), `side_size` (32), `base_channels`, `latent_dim`, `n_epochs`, `batch_size`, `lr`, `kl_weight` (weighting on the KL term, aka β in β-VAE), `num_interpolation_steps` (for the inference interpolation test).
 
 **Constraint:** however many stride-2 downsampling stages the encoder uses, `side_size` must be evenly divisible by `2^num_stages` — same reasoning as the UNet/DiT constraints in the other projects, just applied to the encoder/decoder's conv stack here instead.
 

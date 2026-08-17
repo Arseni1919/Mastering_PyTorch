@@ -63,7 +63,7 @@ def train_procedure():
     ).to(device)
     print(f'num params: {sum(p.numel() for p in net.parameters())}')
     print(f'hidden_size={config.hidden_size} | num_layers={config.num_layers} | n_epochs={config.n_epochs}')
-    optimizer = torch.optim.Adam(net.parameters(), lr=config.learning_rate)
+    optimizer = torch.optim.Adam(net.parameters(), lr=config.lr)
     loss_fn: nn.MSELoss = nn.MSELoss()
 
     losses = []

@@ -6,7 +6,7 @@ Phase 3: a latent flow-matching pipeline on CelebA (128×128), using a **frozen,
 
 ## 0. Config
 
-Fields you'll need: `side_size` (128, pixel-space image size), `vae_scale_factor` (8 — fixed by the pretrained VAE's architecture, not something you choose), `latent_channels` (4 — also fixed by the pretrained VAE), `pretrained_vae_id` (the `diffusers` model string, e.g. `"stabilityai/sd-vae-ft-mse"`), `patch_size` (for the DiT, operating on the *latent* grid), `hidden_size`, `num_heads`, `num_layers`, `mlp_ratio`, `time_emb_size`, `n_epochs`, `batch_size`, `learning_rate`, `num_inference_steps`.
+Fields you'll need: `side_size` (128, pixel-space image size), `vae_scale_factor` (8 — fixed by the pretrained VAE's architecture, not something you choose), `latent_channels` (4 — also fixed by the pretrained VAE), `pretrained_vae_id` (the `diffusers` model string, e.g. `"stabilityai/sd-vae-ft-mse"`), `patch_size` (for the DiT, operating on the *latent* grid), `hidden_size`, `num_heads`, `num_layers`, `mlp_ratio`, `time_emb_size`, `n_epochs`, `batch_size`, `lr`, `num_inference_steps`.
 
 **Constraint:** `side_size` must be divisible by `vae_scale_factor` (128/8 = 16 ✓). The resulting `latent_side_size = side_size // vae_scale_factor` must itself be divisible by `patch_size` — same divisibility discipline as `my_DiT`, just one level removed: it's the *latent* grid that needs to tile evenly, not the original image.
 
