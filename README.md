@@ -24,6 +24,7 @@
 - DDIM
 - Flow Matching
 - VAE
+- Siamese Net
 
 ### Text
 

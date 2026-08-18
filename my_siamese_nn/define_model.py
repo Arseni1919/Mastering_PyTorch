@@ -38,6 +38,12 @@ class HyperNet(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
             nn.Linear(hidden_dim, self.out_dim)
         )
 
@@ -57,12 +63,17 @@ class Switcher:
 
     def __call__(self, gray_image: torch.Tensor, coordinates: torch.Tensor):
         weights = self.hyper_net(gray_image)
+        batch_size, _ = weights.shape
         params = {}
-        chunks = weights.split(self.numels, dim=-1)
-        for name, chunk, shape in zip(self.names, chunks, self.shapes):
-            params[name] = chunk.reshape(shape)
-        out = functional_call(self.main_net, params, coordinates)
-        return out
+        outs = []
+        for i in range(batch_size):
+            chunks = weights[i].split(self.numels, dim=-1)
+            for name, chunk, shape in zip(self.names, chunks, self.shapes):
+                params[name] = chunk.reshape(shape)
+            out = functional_call(self.main_net, params, coordinates[i])
+            outs.append(out)
+        outs = torch.stack(outs, dim=0)
+        return outs
 
 
 def main():
@@ -77,7 +88,7 @@ def main():
     hyper_net = HyperNet(input_net=classifier, in_dim=ch * h_ * w_, hidden_dim=128)
     switcher = Switcher(classifier, hyper_net)
 
-    out = switcher(gray_image.flatten().flatten().unsqueeze(0), coordinates.unsqueeze(0))
+    out = switcher(gray_image.flatten().unsqueeze(0), coordinates.unsqueeze(0))
 
     print(out.shape)
     print(out)
