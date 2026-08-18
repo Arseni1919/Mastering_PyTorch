@@ -29,7 +29,7 @@ class Config:
     sigreg_lambda: float = 0.01
     sigreg_num_slices: int = 32
     # --- training
-    epochs: int = 100
+    epochs: int = 70
     batch_size: int = 16
     accum_steps = 4
     lr: float = 1e-3

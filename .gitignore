@@ -9,6 +9,8 @@ cifar
 **/cifar/
 stl10
 **/stl10/
+push_t
+**/push_t/
 KTH_Action/
 **/KTH_Action/
 *.pt

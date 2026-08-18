@@ -149,7 +149,7 @@ def train_procedure():
 @app.function(
     image=image,
     gpu="A10G",
-    timeout=7200,
+    timeout=14400,
     secrets=[modal.Secret.from_name("wandb-secret")],
     volumes={"/root/stl10": stl10_volume}
 )
