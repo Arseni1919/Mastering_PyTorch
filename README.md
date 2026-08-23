@@ -51,11 +51,11 @@
 
 ## Credits
 
-- [HF | Diffusion Models from Scratch
-](https://huggingface.co/learn/diffusion-course/en/unit1/3)
+- [HF | Diffusion Models from Scratch](https://huggingface.co/learn/diffusion-course/en/unit1/3)
 - [KTH Action Recognition Dataset](https://www.kaggle.com/datasets/vafaeii/kth-action-recognition-dataset?resource=download)
 - [Moving MNIST](https://www.cs.toronto.edu/~nitish/unsupervised_video/)
 - [Medium | I-JEPA Tutorial](https://pub.towardsai.net/i-built-i-jepa-from-scratch-and-it-beat-my-own-mae-with-a-frozen-encoder-75a921391e49) [(GitHub code)](https://github.com/Alpsource/Visual-Representation-Learning-JEPA/blob/main/models.py)
+- [yt | Flow Matching | Explanation + PyTorch Implementation](https://www.youtube.com/watch?v=7cMzfkWFWhI)
 
 
 
