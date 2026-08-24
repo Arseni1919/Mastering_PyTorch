@@ -2,6 +2,12 @@
 import gymnasium as gym
 import gym_pusht
 
+
+# from lerobot.datasets.lerobot_dataset import LeRobotDataset
+# ds = LeRobotDataset("lerobot/pusht", root="./push_t")
+#
+# print(ds)
+
 env = gym.make("gym_pusht/PushT-v0", render_mode="human")
 observation, info = env.reset()
 
