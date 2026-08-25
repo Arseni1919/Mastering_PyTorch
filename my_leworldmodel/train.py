@@ -3,9 +3,14 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from sklearn.decomposition import PCA
+from statistics import mean
 
 from get_data import NavDataset
 from define_model import Encoder, Predictor
+
+def calc_ma(data: list, n: int):
+    ma = [mean(data[i:i + n]) for i in range(len(data) - n + 1)]
+    return ma
 
 
 def pca_plot(data: torch.Tensor):
@@ -24,6 +29,29 @@ def pca_plot(data: torch.Tensor):
     plt.show()
 
 
+def losses_plot(losses, losses_pred, losses_segreg, n: int = 100):
+    fig, ax = plt.subplots(1, 3)
+
+    x_list = list(range(len(losses)))
+    ma_x_list = x_list[n-1:]
+
+    ax[0].plot(x_list, losses)
+    ma_losses = calc_ma(losses, n)
+    ax[0].plot(ma_x_list, ma_losses, color='red')
+    ax[0].set_title('losses')
+
+    ax[1].plot(x_list, losses_pred)
+    ma_losses = calc_ma(losses_pred, n)
+    ax[1].plot(ma_x_list, ma_losses, color='red')
+    ax[1].set_title('losses_pred')
+
+    ax[2].plot(x_list, losses_segreg)
+    ma_losses = calc_ma(losses_segreg, n)
+    ax[2].plot(ma_x_list, ma_losses, color='red')
+    ax[2].set_title('losses_segreg')
+
+    plt.show()
+
 def get_loss_segreg(vectors: torch.Tensor, gamma=1.0, eps=1e-4,
                     var_coef=1.0, cov_coef=0.04):
     B, D = vectors.shape
@@ -41,10 +69,10 @@ def get_loss_segreg(vectors: torch.Tensor, gamma=1.0, eps=1e-4,
 
 
 def train_procedure():
-    side = 10
-    out_features = 10
+    side = 15
+    out_features = 16
     # --- training
-    epochs = 20
+    epochs = 10
     lr = 1e-4
     bs = 64
     lam = 1
@@ -52,12 +80,14 @@ def train_procedure():
 
     dataset = NavDataset(side=side)
     dataloader = DataLoader(dataset, batch_size=bs, shuffle=True)
-    encoder = Encoder(out_features=out_features)
+    encoder = Encoder(in_features=side**2, out_features=out_features)
     predictor = Predictor(out_features=out_features)
     params = [p for p in encoder.parameters()] + [p for p in predictor.parameters()]
     optim = torch.optim.Adam(params=params, lr=lr)
 
     losses = []
+    losses_pred = []
+    losses_segreg = []
 
     for epoch in range(epochs):
         for i, (curr_state, rand_action, next_state) in enumerate(dataloader):
@@ -75,14 +105,19 @@ def train_procedure():
 
             if epoch > 2:
                 losses.append(loss.item())
+                losses_pred.append(loss_pred.item())
+                losses_segreg.append(loss_segreg.item())
             print(f'\r[epoch {epoch}/{epochs}][batch {i}/{len(dataloader)}] loss = {loss.item()}', end='')
+
+    # save the weights
+    torch.save(encoder.state_dict(), 'encoder.pt')
+    torch.save(predictor.state_dict(), 'predictor.pt')
 
     with torch.no_grad():
         curr_state, rand_action, next_state = next(iter(dataloader))
         data = encoder(curr_state)
         pca_plot(data)
-        plt.plot(losses)
-        plt.show()
+        losses_plot(losses, losses_pred, losses_segreg)
 
 def main():
     train_procedure()
