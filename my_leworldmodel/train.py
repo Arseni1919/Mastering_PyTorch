@@ -6,11 +6,19 @@ from sklearn.decomposition import PCA
 from statistics import mean
 
 from get_data import NavDataset
-from define_model import Encoder, Predictor
+from define_model import Encoder, TranslationPredictor, Predictor
 
 def calc_ma(data: list, n: int):
     ma = [mean(data[i:i + n]) for i in range(len(data) - n + 1)]
     return ma
+
+
+def plot_field_online(ax, encoder, side):
+    all_images = torch.eye(side * side).reshape(side * side, 1, side, side)
+    encodings = encoder(all_images).detach().numpy()
+    x = [i[0] for i in encodings]
+    y = [i[1] for i in encodings]
+    ax.scatter(x, y)
 
 
 def pca_plot(data: torch.Tensor):
@@ -29,7 +37,7 @@ def pca_plot(data: torch.Tensor):
     plt.show()
 
 
-def losses_plot(losses, losses_pred, losses_segreg, n: int = 100):
+def losses_plot(losses, losses_pred, losses_sigreg, n: int = 100):
     fig, ax = plt.subplots(1, 3)
 
     x_list = list(range(len(losses)))
@@ -45,59 +53,74 @@ def losses_plot(losses, losses_pred, losses_segreg, n: int = 100):
     ax[1].plot(ma_x_list, ma_losses, color='red')
     ax[1].set_title('losses_pred')
 
-    ax[2].plot(x_list, losses_segreg)
-    ma_losses = calc_ma(losses_segreg, n)
+    ax[2].plot(x_list, losses_sigreg)
+    ma_losses = calc_ma(losses_sigreg, n)
     ax[2].plot(ma_x_list, ma_losses, color='red')
-    ax[2].set_title('losses_segreg')
+    ax[2].set_title('lam * losses_sigreg')
 
     plt.show()
 
-def get_loss_segreg(vectors: torch.Tensor, gamma=1.0, eps=1e-4,
-                    var_coef=1.0, cov_coef=0.04):
-    B, D = vectors.shape
-    z = vectors - vectors.mean(0)
 
-    # variance: push each dim's std across the batch up to gamma
-    std = torch.sqrt(z.var(0) + eps)
-    var_loss = torch.relu(gamma - std).mean()
+def get_loss_sigreg(vectors: torch.Tensor, num_slices: int = 256,
+                    n_points: int = 17, t_max: float = 5.0):
+    """Epps-Pulley normality test on random 1-D projections of the latents."""
+    P, D = vectors.shape
 
-    # covariance: decorrelate dimensions so they don't duplicate each other
-    cov = (z.T @ z) / (B - 1)
-    cov_loss = (cov - torch.diag(torch.diagonal(cov))).pow(2).sum() / D
+    # fresh random unit directions every call: cheap coverage that compounds over training
+    directions = torch.randn(D, num_slices, device=vectors.device, dtype=vectors.dtype)
+    directions = directions / directions.norm(dim=0, keepdim=True)
+    projections = vectors @ directions                          # (P, num_slices)
 
-    return var_coef * var_loss + cov_coef * cov_loss
+    t = torch.linspace(-t_max, t_max, n_points, device=vectors.device, dtype=vectors.dtype)
+    target_cf = torch.exp(-0.5 * t ** 2)                        # char. function of N(0, 1)
+
+    phase = projections[..., None] * t                          # (P, num_slices, n_points)
+    empirical_cf = torch.exp(1j * phase).mean(0)                # (num_slices, n_points)
+
+    # target_cf doubles as the weight, which is what makes the integral converge
+    diff = empirical_cf - target_cf
+    weighted_err = (diff.real ** 2 + diff.imag ** 2) * target_cf
+    per_slice = P * torch.trapezoid(weighted_err, t)            # (num_slices,)
+
+    return per_slice.mean()
 
 
 def train_procedure():
     side = 15
-    out_features = 16
+    N_data = 100000
+    out_features = 2     # 2-D latent: the grid has only 2 degrees of freedom
     # --- training
-    epochs = 10
+    epochs = 20
     lr = 1e-4
     bs = 64
-    lam = 1
+    lam = 0.001   # sigreg reads ~1.0 when the latent IS Gaussian, ~10-50 while it is not,
+                 # and loss_pred is in [0, 1] (unit-variance latents), so lam*sigreg is
+                 # comparable to loss_pred for lam in 0.01-0.1. Picked 0.01 by probe R2.
 
 
-    dataset = NavDataset(side=side)
+    dataset = NavDataset(N=N_data, side=side)
     dataloader = DataLoader(dataset, batch_size=bs, shuffle=True)
     encoder = Encoder(in_features=side**2, out_features=out_features)
-    predictor = Predictor(out_features=out_features)
+    predictor = TranslationPredictor(out_features=out_features)
+    # predictor = Predictor(out_features=out_features)
     params = [p for p in encoder.parameters()] + [p for p in predictor.parameters()]
     optim = torch.optim.Adam(params=params, lr=lr)
 
     losses = []
     losses_pred = []
-    losses_segreg = []
+    losses_sigreg = []
+    fig, ax = plt.subplots()
 
     for epoch in range(epochs):
         for i, (curr_state, rand_action, next_state) in enumerate(dataloader):
             enc_out = encoder(curr_state)
             pred_out = predictor(enc_out, rand_action)
-            with torch.no_grad():
-                target = encoder(next_state)
+            target = encoder(next_state)          # NOT detached: SIGReg is the only anti-collapse
             loss_pred = ((target - pred_out) ** 2).mean()
-            loss_segreg = get_loss_segreg(enc_out)
-            loss = loss_pred + lam * loss_segreg  # lam ~ 1.0 to start
+            loss_sigreg = get_loss_sigreg(torch.cat([enc_out, target], dim=0))
+            loss = loss_pred + lam * loss_sigreg
+            # loss = loss_pred
+            # loss_sigreg = 0
 
             loss.backward()
             optim.step()
@@ -106,18 +129,25 @@ def train_procedure():
             if epoch > 2:
                 losses.append(loss.item())
                 losses_pred.append(loss_pred.item())
-                losses_segreg.append(loss_segreg.item())
+                losses_sigreg.append(lam * loss_sigreg.item())
+            if i % 10 == 0:
+                ax.cla()
+                plot_field_online(ax, encoder, side)
+                plt.pause(0.01)
             print(f'\r[epoch {epoch}/{epochs}][batch {i}/{len(dataloader)}] loss = {loss.item()}', end='')
 
     # save the weights
     torch.save(encoder.state_dict(), 'encoder.pt')
     torch.save(predictor.state_dict(), 'predictor.pt')
+    print('--- saved ---')
+
+    plt.show()
 
     with torch.no_grad():
         curr_state, rand_action, next_state = next(iter(dataloader))
         data = encoder(curr_state)
         pca_plot(data)
-        losses_plot(losses, losses_pred, losses_segreg)
+        losses_plot(losses, losses_pred, losses_sigreg)
 
 def main():
     train_procedure()

@@ -10,10 +10,6 @@ class Encoder(nn.Module):
         self.mlp = nn.Sequential(
             nn.Linear(in_features, hidden),
             nn.ReLU(),
-            nn.Linear(hidden, hidden),
-            nn.ReLU(),
-            nn.Linear(hidden, hidden),
-            nn.ReLU(),
             nn.Linear(hidden, out_features)
         )
 
@@ -24,18 +20,37 @@ class Encoder(nn.Module):
         return x
 
 
-class Predictor(nn.Module):
-    def __init__(self, out_features: int = 10, hidden: int = 256):
+class TranslationPredictor(nn.Module):
+    """z_{t+1} = z_t + emb(a).
+
+    An action can only TRANSLATE the latent, never reshape it. That constraint is what
+    forces the encoder to lay the grid out as a lattice: the only way to predict every
+    transition with a single per-action offset is for the latent to be an affine function
+    of the agent's (row, col). The flexible MLP Predictor above has no such pressure --
+    it can memorise an arbitrary scramble of the 225 states, which leaves latent distance
+    meaningless for planning.
+    """
+    def __init__(self, out_features: int = 2):
         super().__init__()
         self.action_emb = nn.Embedding(5, out_features)
+        nn.init.zeros_(self.action_emb.weight)
+
+    def forward(self, x, action):
+        return x + self.action_emb(action)
+
+
+class Predictor(nn.Module):
+    def __init__(self, out_features: int = 10, hidden: int = 16):
+        super().__init__()
+        self.action_emb = nn.Embedding(5, out_features)
+        nn.init.zeros_(self.action_emb.weight)
         self.mlp = nn.Sequential(
             nn.Linear(out_features, hidden),
             nn.GELU(),
-            nn.Linear(hidden, hidden),
-            nn.GELU(),
+            # nn.Linear(hidden, hidden),
+            # nn.GELU(),
             nn.Linear(hidden, out_features)
         )
-
 
     def forward(self, x, action):
         h = x + self.action_emb(action)
@@ -60,3 +75,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+

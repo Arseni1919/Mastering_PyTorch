@@ -17,21 +17,22 @@ def create_next_state(curr_state: torch.Tensor, action: int):
     next_state = torch.zeros_like(curr_state)
     if action == 0:  # stay
         return curr_state
+    # NOTE: curr_state is (C, H, W) -- slice the last two dims, not dims 0 and 1
     if action == 1: # forward
-        next_state[:-1] = curr_state[1:]
-        next_state[0] += curr_state[0]
+        next_state[..., :-1, :] = curr_state[..., 1:, :]  # each row takes the content of the row below it
+        next_state[..., 0, :] += curr_state[..., 0, :]  # top row would be dropped; keep it in place
         return next_state
     if action == 2:  # backward
-        next_state[1:] = curr_state[:-1]
-        next_state[-1] += curr_state[-1]
+        next_state[..., 1:, :] = curr_state[..., :-1, :]  # each row takes the content of the row above it
+        next_state[..., -1, :] += curr_state[..., -1, :]  # bottom row would be dropped; keep it in place
         return next_state
     if action == 3:  # right
-        next_state[:, 1:] = curr_state[:, :-1]  # each column takes the content of the column to its left
-        next_state[:, -1] += curr_state[:, -1]  # last column would be dropped; keep it in place
+        next_state[..., :, 1:] = curr_state[..., :, :-1]  # each column takes the content of the column to its left
+        next_state[..., :, -1] += curr_state[..., :, -1]  # last column would be dropped; keep it in place
         return next_state
     if action == 4:  # left
-        next_state[:, :-1] = curr_state[:, 1:]  # each column takes the content of the column to its left
-        next_state[:, 0] += curr_state[:, 0]  # last column would be dropped; keep it in place
+        next_state[..., :, :-1] = curr_state[..., :, 1:]  # each column takes the content of the column to its right
+        next_state[..., :, 0] += curr_state[..., :, 0]  # first column would be dropped; keep it in place
         return next_state
     else:
         raise RuntimeError()
