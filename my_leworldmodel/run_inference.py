@@ -167,12 +167,10 @@ def main():
 
     # success, final_distance = evaluate(encoder, predictor, side=side)
     # print(f'success rate: {success:.1%} | mean final manhattan distance: {final_distance:.2f}')
-    #
     # animate(encoder, predictor, side=side)
 
     success = evaluate_latent(encoder, predictor, side=side)
     print(f'success rate: {success:.1%}')
-
     animate_latent(encoder, predictor, side=side)
 
     plot_field(encoder, side)

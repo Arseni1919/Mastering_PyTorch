@@ -20,6 +20,21 @@ class Encoder(nn.Module):
         return x
 
 
+class PointMazeTranslationPredictor(nn.Module):
+    def __init__(self, out_features: int = 4, hidden=128):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(2, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, out_features),
+        )
+
+    def forward(self, x: torch.Tensor, action: torch.Tensor):
+        return x + self.net(action)
+
+
 class TranslationPredictor(nn.Module):
     """z_{t+1} = z_t + emb(a).
 

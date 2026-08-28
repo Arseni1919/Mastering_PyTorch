@@ -11,7 +11,16 @@ define_model.py:48 — added TranslationPredictor (z_{t+1} = z_t + emb(a), zero-
 ```
 - to make run inference script to run multi-step prediction and not only a single step forward
 - to understand `run_probe.py` script
-- to understand SigReg function
+- to understand SigReg function 
+- what happens exactly at the point where the nice converged latent space goes crazy without SigReg
+- to experiment with SigReg lam value
+- to experiment with different seeds that can squeeze the initial convergence
+- to experiment with different sizes and shapes of the map
+- to experiment with different reg functions
+- to experiment with different predictors
+- to experiment with more complex domains closer to real applications
+- to achieve 100% success rate in latent space - look closely at the cases where it misses the target location
+- to experiment with continual learning concept where the agent for example needs to learn fast a new skill
 
 
 ## DONEs
