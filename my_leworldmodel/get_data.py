@@ -3,16 +3,19 @@ import random
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset
 from torch.utils.data.dataset import _T_co
+from torchvision import transforms
 from tqdm import tqdm
 import gymnasium as gym
 import gymnasium_robotics
+import numpy as np
+from wandb.sdk.launch.utils import validate_build_and_registry_configs
 
 gym.register_envs(gymnasium_robotics)
 
 
 def create_curr_state(side):
     curr_state = torch.zeros((side, side))
-    padding = 2
+    padding = 20
     pos_is_ok = False
     while not pos_is_ok:
         x = random.randint(0, side - 1)
@@ -73,7 +76,7 @@ class NavDataset(Dataset):
         return len(self.data)
 
 
-class PointMazeDataset(Dataset):
+class PointMazeVecDataset(Dataset):
     def __init__(self, N: int = 10000):
         super().__init__()
         self.data = []
@@ -107,34 +110,126 @@ class PointMazeDataset(Dataset):
         return len(self.data)
 
 
+def get_point_maze_rgb_env(max_episode_steps: int = 100):
+    # 100 is right for collecting data (short, varied episodes); planning needs a longer
+    # cap, otherwise episodes are truncated as failures before the goal is reached.
+    env = gym.make('PointMaze_UMaze-v3', max_episode_steps=max_episode_steps,
+                   render_mode='rgb_array', width=64, height=64)
+    # set a currect angle and remove a target location object
+    pe = env.unwrapped.point_env
+    pe.mujoco_renderer.default_cam_config = dict(
+        distance=4.0, elevation=-90.0, azimuth=90.0, lookat=np.zeros(3))
+    pe.mujoco_renderer.close()  # forces the viewer to rebuild with the new config
+    m = pe.model
+    for i in range(m.nsite):
+        if 'target' in m.site(i).name:
+            m.site_rgba[i, 3] = 0.0
+    return env
+
+
+class PointMazeRGBDataset(Dataset):
+    def __init__(self, N: int = 10000, frameskip: int = 5, history: int = 3):
+        super().__init__()
+        self.N = N
+        self.frameskip = frameskip
+        self.history = history
+        self.frames = []          # every boundary frame, uint8, flat across episodes
+        self.states = []          # ground-truth [x, y, vx, vy] for each frame -- PROBE ONLY, never trained on
+        self.transitions = []     # [newest_frame_index, action]
+        self.transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225]
+            )
+        ])
+
+        env = get_point_maze_rgb_env()
+
+        obs, info = env.reset(seed=42)
+        self.frames.append(env.render().copy())
+        self.states.append(obs['observation'].copy())
+        episode_start = len(self.frames) - 1
+        action = env.action_space.sample()
+        action_counter = 0
+        pbar = tqdm(total=N)
+        while len(self.transitions) < N:
+            action_counter += 1
+            obs, reward, terminated, truncated, info = env.step(action)
+            if terminated or truncated:
+                obs, info = env.reset()
+                self.frames.append(env.render().copy())
+                self.states.append(obs['observation'].copy())
+                episode_start = len(self.frames) - 1   # no stack may span a reset
+                action = env.action_space.sample()
+                action_counter = 0
+                continue
+            if action_counter == frameskip:
+                action_counter = 0
+                self.frames.append(env.render().copy())
+                self.states.append(obs['observation'].copy())
+                i = len(self.frames) - 1
+                if i - episode_start >= history:       # history+1 frames available in THIS episode
+                    self.transitions.append([i, action])
+                    pbar.update(1)
+                action = env.action_space.sample()
+        env.close()
+
+    def __getitem__(self, index) -> _T_co:
+        i, action = self.transitions[index]
+        curr_obs = self.stack(i - 1)
+        next_obs = self.stack(i)
+        return curr_obs, torch.tensor(action), next_obs
+
+    def __len__(self):
+        return len(self.transitions)
+
+    def get_states(self, index):
+        """ground-truth (state_t, state_t+1) for transition `index` -- for the probe, not training"""
+        i, _ = self.transitions[index]
+        return (torch.tensor(self.states[i - 1], dtype=torch.float32),
+                torch.tensor(self.states[i], dtype=torch.float32))
+
+    def stack(self, j):
+        """the (3*history, H, W) observation whose NEWEST frame is frames[j], oldest first"""
+        imgs = [self.transform(self.frames[k]) for k in range(j - self.history + 1, j + 1)]
+        return torch.cat(imgs, dim=0)
+
 
 def main():
-    data = get_nav_data(side=15)
-    actions_dict = {
-        0: 'stay', 1: 'up', 2: 'down', 3: 'right', 4: 'left'
-    }
-    counter = torch.zeros_like(data[0][0])
-    actions_counter = {k: 0 for k in actions_dict.keys()}
-    action_labels = [actions_dict[k] for k in actions_counter.keys()]
-    fig, ax = plt.subplots(1, 4)
-    for i, (curr_state, rand_action, next_state) in enumerate(data):
-        rand_action = rand_action.item()
-        ax[0].cla()
-        ax[0].imshow(curr_state.squeeze().numpy())
-        ax[1].cla()
-        ax[1].imshow(next_state.squeeze().numpy())
-        ax[1].set_title(f'action: {actions_dict[rand_action]}')
-        counter = counter + curr_state
-        ax[2].cla()
-        ax[2].imshow(counter.squeeze().numpy())
-        ax[2].set_title(f'count: {i}')
-        ax[3].cla()
-        actions_counter[rand_action] += 1
-        action_vals = [v for k, v in actions_counter.items()]
-        ax[3].bar(action_labels, action_vals, color="steelblue")
-        ax[3].set_title(f'actions')
-        plt.pause(0.001)
-    plt.show()
+    # point-maze dataset
+    dataset = PointMazeRGBDataset(N=100)
+    for idx, i in enumerate(dataset):
+        print(i)
+        if idx > 10:
+            break
+    # nav dataset
+    # data = get_nav_data(side=15)
+    # actions_dict = {
+    #     0: 'stay', 1: 'up', 2: 'down', 3: 'right', 4: 'left'
+    # }
+    # counter = torch.zeros_like(data[0][0])
+    # actions_counter = {k: 0 for k in actions_dict.keys()}
+    # action_labels = [actions_dict[k] for k in actions_counter.keys()]
+    # fig, ax = plt.subplots(1, 4)
+    # for i, (curr_state, rand_action, next_state) in enumerate(data):
+    #     rand_action = rand_action.item()
+    #     ax[0].cla()
+    #     ax[0].imshow(curr_state.squeeze().numpy())
+    #     ax[1].cla()
+    #     ax[1].imshow(next_state.squeeze().numpy())
+    #     ax[1].set_title(f'action: {actions_dict[rand_action]}')
+    #     counter = counter + curr_state
+    #     ax[2].cla()
+    #     ax[2].imshow(counter.squeeze().numpy())
+    #     ax[2].set_title(f'count: {i}')
+    #     ax[3].cla()
+    #     actions_counter[rand_action] += 1
+    #     action_vals = [v for k, v in actions_counter.items()]
+    #     ax[3].bar(action_labels, action_vals, color="steelblue")
+    #     ax[3].set_title(f'actions')
+    #     plt.pause(0.001)
+    # plt.show()
 
 
 if __name__ == '__main__':

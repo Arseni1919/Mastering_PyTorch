@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from sklearn.decomposition import PCA
 from statistics import mean
 
-from get_data import PointMazeDataset
+from get_data import PointMazeVecDataset
 from define_model import PointMazeTranslationPredictor
 
 def calc_ma(data: list, n: int):
@@ -71,7 +71,7 @@ def train_procedure():
     lam = 0.001
 
 
-    dataset = PointMazeDataset(N=N_data)
+    dataset = PointMazeVecDataset(N=N_data)
     dataloader = DataLoader(dataset, batch_size=bs, shuffle=True)
     predictor = PointMazeTranslationPredictor(out_features=out_features)
     optim = torch.optim.Adam(params=predictor.parameters(), lr=lr)
@@ -85,10 +85,11 @@ def train_procedure():
         for i, (curr_state, rand_action, next_state) in enumerate(dataloader):
             pred_out = predictor(curr_state, rand_action)
             loss_pred = ((next_state - pred_out) ** 2).mean()
-            loss_sigreg = get_loss_sigreg(pred_out)
-            loss = loss_pred + lam * loss_sigreg
-            # loss = loss_pred
-            # loss_sigreg = torch.tensor(0)
+            # NO SIGReg here: there is no encoder in this pipeline. The "latent" IS the raw
+            # physical state, so nothing can collapse and the regulariser only adds bias --
+            # it was pulling predicted states toward a Gaussian the maze physics does not follow.
+            loss_sigreg = torch.tensor(0.0)
+            loss = loss_pred
 
             loss.backward()
             optim.step()

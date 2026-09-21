@@ -1,5 +1,6 @@
 import gymnasium as gym
 import gymnasium_robotics
+import matplotlib.pyplot as plt
 import numpy as np
 
 gym.register_envs(gymnasium_robotics)
@@ -20,11 +21,14 @@ for i in range(m.nsite):
 observation, info = env.reset(seed=42)
 curr_img = env.render()
 for i in range(1000):
-   print(f'\rstep: {i}', end='')
-   action = env.action_space.sample()
-   observation, reward, terminated, truncated, info = env.step(action)
-   next_img = env.render()
+    print(f'\rstep: {i}', end='')
+    action = env.action_space.sample()
+    observation, reward, terminated, truncated, info = env.step(action)
+    next_img = env.render()
 
-   if terminated or truncated:
-      observation, info = env.reset()
+    if terminated or truncated:
+        observation, info = env.reset()
+    plt.cla()
+    plt.imshow(next_img)
+    plt.pause(0.001)
 env.close()
